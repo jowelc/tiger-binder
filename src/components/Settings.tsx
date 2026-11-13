@@ -1,12 +1,13 @@
 "use client";
 import { useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { X, Download, Upload, Trash2, AlertTriangle } from "lucide-react";
+import { X, Download, Upload, Trash2, AlertTriangle, Cloud, KeyRound } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { MANIFEST_NOTES } from "@/data/cards";
 
 export function Settings({ onClose }: { onClose: () => void }) {
-  const { exportJson, importJson, resetAll } = useStore();
+  const { exportJson, importJson, resetAll, sync, unlock, lock } = useStore();
+  const [pin, setPin] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const [msg, setMsg] = useState("");
   const [confirmReset, setConfirmReset] = useState(false);
@@ -26,14 +27,35 @@ export function Settings({ onClose }: { onClose: () => void }) {
       <motion.div initial={{ scale: 0.92, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0 }} className="glass relative max-h-[90vh] w-full max-w-lg space-y-3 overflow-y-auto rounded-2xl border-ember/30 p-5 sm:p-6">
         <button onClick={onClose} aria-label="Close settings" className="absolute right-4 top-4 text-muted hover:text-white"><X className="h-5 w-5" /></button>
         <h2 className="font-display text-lg font-bold tracking-widest text-tiger">SETTINGS · DATA</h2>
+        <div className="rounded-xl border border-line bg-void/60 p-4 text-sm">
+          <div className="mb-1 flex items-center gap-2 font-semibold"><Cloud className="h-4 w-4 text-ember" />
+            {sync.mode === "shared" ? "Shared cloud collection — anyone can update" : sync.mode === "local" ? "This device only" : "Connecting…"}
+          </div>
+          <p className="text-xs text-muted">
+            {sync.mode === "local" && "Cloud storage isn't set up, so progress is saved in this browser only."}
+            {sync.mode === "shared" && (sync.canEdit
+              ? `Editing enabled · ${sync.status === "saving" ? "saving…" : sync.status === "saved" ? "all changes saved" : sync.status === "error" ? "save failed" : "up to date"}`
+              : "View only. Enter the editing PIN to make changes.")}
+          </p>
+          {sync.error && <p className="mt-1 text-xs text-red-400">{sync.error}</p>}
+          {sync.mode === "shared" && sync.pinRequired && (sync.canEdit ? (
+            <button onClick={lock} className="mt-2 text-xs font-semibold tracking-widest text-ember hover:underline">LOCK EDITING</button>
+          ) : (
+            <form className="mt-3 flex gap-2" onSubmit={async (e) => { e.preventDefault(); setMsg((await unlock(pin)) ? "Editing unlocked." : "Wrong PIN."); setPin(""); }}>
+              <div className="relative flex-1"><KeyRound className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+                <input type="password" inputMode="numeric" autoComplete="off" placeholder="Editing PIN" value={pin} onChange={(e) => setPin(e.target.value)} className="w-full rounded-lg border border-line bg-void/70 py-2.5 pl-8 pr-2 text-base outline-none focus:border-ember/60" /></div>
+              <button className="rounded-lg bg-tiger px-4 text-sm font-bold text-black">Unlock</button>
+            </form>
+          ))}
+        </div>
         <button className={btn} onClick={doExport}><Download className="h-4 w-4 text-ember" /> Export collection (JSON)</button>
-        <button className={btn} onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4 text-gold" /> Import collection (JSON)</button>
+        <button className={`${btn} disabled:opacity-40`} disabled={!sync.canEdit} onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4 text-gold" /> Import collection (JSON)</button>
         <input ref={fileRef} type="file" accept="application/json" hidden onChange={async (e) => {
           const f = e.target.files?.[0]; if (!f) return;
           setMsg(importJson(await f.text()).message); e.target.value = "";
         }} />
         {!confirmReset ? (
-          <button className={`${btn} hover:!border-red-500/60`} onClick={() => setConfirmReset(true)}><Trash2 className="h-4 w-4 text-red-400" /> Reset collection…</button>
+          <button className={`${btn} hover:!border-red-500/60 disabled:opacity-40`} disabled={!sync.canEdit} onClick={() => setConfirmReset(true)}><Trash2 className="h-4 w-4 text-red-400" /> Reset collection…</button>
         ) : (
           <div className="rounded-xl border border-red-500/50 bg-red-500/10 p-4">
             <p className="mb-3 flex items-center gap-2 text-sm text-red-300"><AlertTriangle className="h-4 w-4" /> This erases every owned card, note and image. Export first!</p>

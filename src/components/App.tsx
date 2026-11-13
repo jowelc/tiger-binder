@@ -19,7 +19,7 @@ import { Footer } from "./Footer";
 import { TigerEye } from "./Brand";
 
 export function App() {
-  const { ready, cards, owned, percent } = useStore();
+  const { ready, cards, owned, percent, sync } = useStore();
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<Sort>("set");
   const [query, setQuery] = useState("");
@@ -75,6 +75,7 @@ export function App() {
               <div className="font-display text-xs font-bold text-ink">{owned}/{TARGET_TOTAL}</div>
               <div className="text-[9px] tracking-[0.15em] text-muted">{percent.toFixed(1)}%</div>
             </div>
+            {sync.mode === "shared" && !sync.canEdit && <span className="hidden rounded-full border border-gold/40 px-2.5 py-1 text-[10px] font-bold tracking-[0.2em] text-gold min-[420px]:inline">VIEW ONLY</span>}
             <ThemeToggle />
             <button onClick={() => setSettings(true)} aria-label="Settings" className="rounded-lg border border-line p-2.5 text-silver transition hover:border-ember/60 hover:text-ember sm:p-2"><Gear className="h-5 w-5" /></button>
           </div>

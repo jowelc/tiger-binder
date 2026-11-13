@@ -11,7 +11,7 @@ const field = "w-full rounded-lg border border-line bg-void/70 px-3 py-2.5 text-
 const lab = "mb-1 block text-[11px] tracking-[0.25em] text-muted";
 
 export function CardModal({ id, onClose }: { id: string; onClose: () => void }) {
-  const { cards, update, setOwned, resetCard } = useStore();
+  const { cards, update, setOwned, resetCard, sync } = useStore();
   const card = cards.find((c) => c.id === id) as BinderCard;
   const fileRef = useRef<HTMLInputElement>(null);
   const [url, setUrl] = useState(card.record.imageUrl ?? "");
@@ -47,7 +47,8 @@ export function CardModal({ id, onClose }: { id: string; onClose: () => void }) 
           </motion.div>
         </div>
 
-        <div className="flex-1 space-y-5 p-4 pb-[max(2rem,env(safe-area-inset-bottom))] sm:p-6 md:pt-8">
+        <fieldset disabled={!sync.canEdit} className="min-w-0 flex-1 space-y-5 border-0 p-4 pb-[max(2rem,env(safe-area-inset-bottom))] sm:p-6 md:pt-8">
+          {!sync.canEdit && <div className="flex items-center gap-2 rounded-lg border border-gold/40 bg-gold/10 px-3 py-2 text-sm text-gold"><Lock className="h-4 w-4" /> View only — unlock editing in Settings.</div>}
           <div>
             <div className="text-[11px] tracking-[0.3em] text-ember">{card.category === "trainer" ? "TRAINER TAG TEAM" : "POKÉMON TAG TEAM"} · {card.variant?.toUpperCase()}</div>
             <h2 className="font-display mt-1 text-2xl font-bold text-ink">{card.displayName}</h2>
@@ -95,7 +96,7 @@ export function CardModal({ id, onClose }: { id: string; onClose: () => void }) 
           </div>
 
           <button onClick={() => { if (confirm("Clear all saved data for this card?")) { resetCard(card.id); setUrl(""); } }} className="text-xs tracking-widest text-muted hover:text-red-400">RESET THIS CARD</button>
-        </div>
+        </fieldset>
       </motion.aside>
     </motion.div>
   );

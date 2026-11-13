@@ -35,6 +35,9 @@ interface Store {
   celebration: (typeof MILESTONES)[number] | null;
   dismissCelebration: () => void;
   lastUnlocked: string | null;
+  sync: { mode: "loading" | "local" | "shared"; canEdit: boolean; pinRequired: boolean; status: "idle" | "saving" | "saved" | "error"; error?: string };
+  unlock: (pin: string) => Promise<boolean>;
+  lock: () => void;
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -50,15 +53,87 @@ export function CollectionProvider({ children }: { children: React.ReactNode }) 
   const [celebration, setCelebration] = useState<Store["celebration"]>(null);
   const [lastUnlocked, setLastUnlocked] = useState<string | null>(null);
   const prevPct = useRef(0);
+  const [mode, setMode] = useState<"loading" | "local" | "shared">("loading");
+  const [pinReq, setPinReq] = useState(false);
+  const [pin, setPin] = useState<string>("");
+  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [syncError, setSyncError] = useState<string | undefined>();
+  const lastSynced = useRef<Collection | null>(null); // what the server is known to hold
+  const dirty = useRef(false);
+  const canEdit = mode !== "shared" || !pinReq || pin !== "";
+
+  const pullRemote = useCallback(async (initial: boolean) => {
+    try {
+      const r = await fetch("/api/collection", { cache: "no-store" });
+      const d = await r.json();
+      if (!d.configured) { setMode("local"); return; }
+      setPinReq(Boolean(d.pinRequired));
+      if (d.error || !d.collection) { if (initial) setMode("local"); return; }
+      const remote = d.collection as Collection;
+      if (!initial && dirty.current) return; // don't clobber in-flight edits
+      const first = lastSynced.current === null;
+      lastSynced.current = remote;
+      setMode("shared");
+      if (Object.keys(remote).length || !first) {
+        // server is the source of truth once it has data (empty server on first load = migrate local data up)
+        prevPct.current = (Object.values(remote).filter((x) => x.owned).length / TARGET_TOTAL) * 100;
+        setCol((cur) => (JSON.stringify(cur) === JSON.stringify(remote) ? cur : remote));
+      }
+    } catch { if (initial) setMode("local"); }
+  }, []);
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(KEY);
       // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate from localStorage after mount
       if (raw) setCol(JSON.parse(raw));
+      setPin(localStorage.getItem("tiger-binder:pin") || "");
     } catch {}
     setReady(true);
+    pullRemote(true);
+  }, [pullRemote]);
+
+  // refresh when the tab regains focus and every 15s so other people's changes appear
+  useEffect(() => {
+    if (mode !== "shared") return;
+    const tick = () => document.visibilityState === "visible" && pullRemote(false);
+    const id = setInterval(tick, 15000);
+    document.addEventListener("visibilitychange", tick);
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", tick); };
+  }, [mode, pullRemote]);
+
+  // push only the cards that changed (debounced)
+  useEffect(() => {
+    if (!ready || mode !== "shared" || !canEdit || lastSynced.current === null) return;
+    const base = lastSynced.current;
+    const changes: Record<string, CardRecord | null> = {};
+    for (const [id, rec] of Object.entries(col)) if (JSON.stringify(rec) !== JSON.stringify(base[id])) changes[id] = rec;
+    for (const id of Object.keys(base)) if (!(id in col)) changes[id] = null;
+    if (!Object.keys(changes).length) { dirty.current = false; return; }
+    dirty.current = true;
+    const t = setTimeout(async () => {
+      setStatus("saving");
+      try {
+        const r = await fetch("/api/collection", { method: "PATCH", headers: { "x-pin": pin, "content-type": "application/json" }, body: JSON.stringify({ changes }) });
+        if (!r.ok) {
+          const e = await r.json().catch(() => ({}));
+          if (r.status === 401) { setPin(""); localStorage.removeItem("tiger-binder:pin"); }
+          throw new Error(e.error === "bad_pin" ? "Wrong PIN." : "Save failed — will retry on next change.");
+        }
+        const next = { ...base };
+        for (const [id, rec] of Object.entries(changes)) { if (rec === null) delete next[id]; else next[id] = rec; }
+        lastSynced.current = next; dirty.current = false; setStatus("saved"); setSyncError(undefined);
+      } catch (e) { setStatus("error"); setSyncError(e instanceof Error ? e.message : "Save failed"); }
+    }, 600);
+    return () => clearTimeout(t);
+  }, [col, ready, mode, canEdit, pin]);
+
+  const unlock = useCallback(async (p: string) => {
+    const r = await fetch("/api/auth", { method: "POST", body: JSON.stringify({ pin: p }) });
+    if (!r.ok) return false;
+    localStorage.setItem("tiger-binder:pin", p); setPin(p); return true;
   }, []);
+  const lock = useCallback(() => { localStorage.removeItem("tiger-binder:pin"); setPin(""); }, []);
 
   useEffect(() => {
     if (!ready) return;
@@ -169,6 +244,7 @@ export function CollectionProvider({ children }: { children: React.ReactNode }) 
     ready, cards, owned, psa10, missing: TARGET_TOTAL - owned, percent, recent,
     update, setOwned, resetCard, exportJson, importJson, resetAll,
     celebration, dismissCelebration: () => setCelebration(null), lastUnlocked,
+    sync: { mode, canEdit, pinRequired: pinReq, status, error: syncError }, unlock, lock,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
