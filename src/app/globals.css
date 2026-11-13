@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+:root, [data-theme="dark"] {
+  --c-void: #08090d; --c-deep: #11131a; --c-slab: #181b24; --c-muted: #777d8c; --c-silver: #c9ced9;
+  --c-ink: #ffffff; --c-body: #e8eaf0; --c-line: rgba(255,255,255,.10); --c-wash: rgba(255,255,255,.07);
+  --c-ember: #ff8a32; --c-gold: #d6a64b; color-scheme: dark;
+}
+[data-theme="light"] {
+  --c-void: #f3eee4; --c-deep: #fbf8f2; --c-slab: #e6dfd0; --c-muted: #666b7a; --c-silver: #3a3f4e;
+  --c-ink: #14161d; --c-body: #1a1d26; --c-line: rgba(20,22,29,.16); --c-wash: rgba(20,22,29,.07);
+  --c-ember: #e8650c; --c-gold: #a8761a; color-scheme: light;
+}
+@theme inline {
+  --color-void: var(--c-void);
+  --color-deep: var(--c-deep);
+  --color-slab: var(--c-slab);
+  --color-ember: var(--c-ember);
+  --color-gold: var(--c-gold);
+  --color-silver: var(--c-silver);
+  --color-muted: var(--c-muted);
+  --color-ink: var(--c-ink);
+  --color-line: var(--c-line);
+  --color-wash: var(--c-wash);
+  --font-display: var(--font-orbitron), ui-sans-serif, system-ui;
+  --font-body: var(--font-rajdhani), var(--font-kr), ui-sans-serif, system-ui;
+  --font-kr: var(--font-kr), ui-sans-serif;
+}
+
+html { background: var(--c-void); scroll-behavior: smooth; }
+body { color: var(--c-body); -webkit-tap-highlight-color: transparent; font-family: var(--font-body); min-height: 100vh; overflow-x: clip; }
+::selection { background: #ff8a3255; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: #08090d; }
+::-webkit-scrollbar-thumb { background: #2a2e3b; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #ff8a32; }
+
+.font-display { font-family: var(--font-display); }
+.text-tiger { background: linear-gradient(100deg, #ff8a32, #d6a64b 60%, #ffe3a8); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.bg-tiger { background: linear-gradient(100deg, #ff8a32, #d6a64b); }
+.glass { background: linear-gradient(160deg, color-mix(in srgb, var(--c-slab) 82%, transparent), color-mix(in srgb, var(--c-deep) 82%, transparent)); backdrop-filter: blur(14px); border: 1px solid var(--c-line); }
+
+/* ambient digital grid */
+.grid-tex {
+  background-image: linear-gradient(var(--c-wash) 1px, transparent 1px), linear-gradient(90deg, var(--c-wash) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse at 50% 20%, #000 20%, transparent 75%);
+}
+/* moving tiger stripes */
+.stripes {
+  background-image: repeating-linear-gradient(115deg, transparent 0 46px, #ff8a3210 46px 52px, transparent 52px 130px, #d6a64b0c 130px 134px);
+  background-size: 400px 400px;
+  animation: stripeMove 60s linear infinite;
+  mask-image: linear-gradient(180deg, #000, transparent 80%);
+}
+@keyframes stripeMove { to { background-position: 400px 200px; } }
+@keyframes drift { 0%{transform:translate3d(0,0,0) scale(1)} 50%{transform:translate3d(6%,-4%,0) scale(1.15)} 100%{transform:translate3d(0,0,0) scale(1)} }
+@keyframes floatUp { from { transform: translateY(0); opacity: 0 } 10%{opacity:1} to { transform: translateY(-110vh); opacity: 0 } }
+@keyframes sheen { from { transform: translateX(-120%) } to { transform: translateX(220%) } }
+@keyframes pulseGlow { 0%,100%{opacity:.55} 50%{opacity:1} }
+@keyframes scan { from{ transform: translateY(-100%)} to {transform: translateY(100vh)} }
+@keyframes slabShine { 0%,70%{ transform: translateX(-130%) skewX(-18deg)} 100%{ transform: translateX(260%) skewX(-18deg)} }
+
+.slot-silhouette { background: radial-gradient(circle at 50% 35%, #232736, #0d0f15 70%); }
+.slab-shine::after { content:""; position:absolute; inset:0; background: linear-gradient(100deg, transparent 35%, #ffffff40 50%, transparent 65%); animation: slabShine 5.5s ease-in-out infinite; pointer-events:none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+}
+
+/* Locked (missing) card art: clearly visible but desaturated and dimmed */
+.locked-art { filter: grayscale(1) brightness(0.5) contrast(1.05); transition: filter .4s ease; }
+@media (hover: hover) { .group:hover .locked-art { filter: grayscale(0.4) brightness(0.75) contrast(1.05); } }
+
+/* Background orbs + scanline */
+.orb { position: absolute; border-radius: 9999px; filter: blur(110px); opacity: .35; will-change: transform; }
+.orb-a { width: 46vw; height: 46vw; left: -10vw; top: -12vw; background: #ff8a32; animation: orbDrift 22s ease-in-out infinite alternate; }
+.orb-b { width: 40vw; height: 40vw; right: -8vw; top: 20vh; background: #d6a64b; opacity: .28; animation: orbDrift 28s ease-in-out infinite alternate-reverse; }
+.orb-c { width: 34vw; height: 34vw; left: 30vw; bottom: -14vw; background: #c2410c; opacity: .25; animation: orbDrift 25s ease-in-out infinite alternate; }
+@keyframes orbDrift { to { transform: translate(8vw, 6vh) scale(1.15); } }
+.scanline { position: absolute; left: 0; right: 0; height: 120px; top: -120px; background: linear-gradient(to bottom, transparent, rgba(255,138,50,.07), transparent); animation: scanDown 9s linear infinite; }
+@keyframes scanDown { to { transform: translateY(calc(100vh + 240px)); } }
+@media (prefers-reduced-motion: reduce) { .orb, .scanline { animation: none; } }
+
+/* PSA slab */
+.psa-case { background: linear-gradient(145deg, #fbfcfe 0%, #dfe3ea 22%, #f6f7fa 45%, #d3d8e1 72%, #eef0f5 100%); box-shadow: inset 0 0 0 1px #ffffffee, inset 0 0 0 3px #c4cad6, inset 0 0 0 4px #ffffffaa, inset 0 -10px 18px -10px #00000030, 0 2px 6px #0008; }
+.psa-well { background: #0b0c10; box-shadow: inset 0 0 0 1px #00000099, inset 0 2px 8px #000000aa, 0 1px 0 #ffffffaa; }
+.psa-label { background: linear-gradient(180deg, #ffffff, #e9ecf2); }
+.psa-barcode { background: repeating-linear-gradient(90deg, #111 0 1px, transparent 1px 2px, #111 2px 4px, transparent 4px 5px, #111 5px 6px, transparent 6px 7px, #111 7px 8px, transparent 8px 10px); }
+.psa-gloss::after { content:""; position:absolute; inset:0; pointer-events:none; border-radius:inherit; background: linear-gradient(115deg, #ffffff55 0%, #ffffff00 28%, #ffffff00 70%, #ffffff30 100%); }
+
+/* Light theme tweaks */
+[data-theme="light"] .orb { opacity: .16; }
+[data-theme="light"] .stripes { opacity: .5; }
+[data-theme="light"] .scanline { background: linear-gradient(to bottom, transparent, rgba(232,101,12,.07), transparent); }
+[data-theme="light"] ::-webkit-scrollbar-track { background: var(--c-void); }
+[data-theme="light"] .text-tiger { background: linear-gradient(100deg, #e8650c, #a8761a 70%, #7a5410); -webkit-background-clip: text; background-clip: text; color: transparent; }
+[data-theme="light"] .locked-art { filter: grayscale(1) brightness(0.72) contrast(1.05); }
+/* always-dark surfaces (celebration overlay) */
+.force-dark { color: #e8eaf0; }
